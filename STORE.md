@@ -7,6 +7,8 @@ Files: `dist/page-to-pdf.zip` (run `npm run package` first), `icons/icon128.png`
 
 Dashboard → **New item** → upload `dist/page-to-pdf.zip`.
 
+This first upload is by hand: the API can update an item but can't create one. After this, GitHub publishes new versions (README, "Automatic releases").
+
 ## 2. Store listing tab
 
 **Description:**
@@ -14,8 +16,11 @@ Dashboard → **New item** → upload `dist/page-to-pdf.zip`.
 ```
 Save the page you're looking at as a PDF.
 
-- Pages: a normal PDF on Letter, A4 or Legal paper, with or without margins.
-- One long page: the whole page on one tall page, no page breaks.
+- Pages or one long page. Get a normal paged PDF, or the whole page on one tall page with no breaks.
+- Any page size. Letter, A4, Legal, 16:9 and 4:3 slides, the size of your window, or a size you type in.
+- Your own scale. Anywhere from 10% to 200%.
+- Wait for animations. Set a few seconds and the PDF is made after pages that animate in have finished. Good for presentations and slide sites.
+- Hide what you don't want. Click "Hide elements…", then click a banner, header, popup or anything else to leave it out of the PDF. Undo any time.
 - As on screen, or with the site's own print style.
 - Scrolls the page first so images that load late are in the PDF.
 - Text stays real text, so you can select and search it.
@@ -51,6 +56,14 @@ Save the current tab as a PDF file.
 - **storage**
   ```
   Remembers the user's settings (paper size, layout, look).
+  ```
+- **activeTab**
+  ```
+  Lets "Hide elements" add its picker to the tab the user is on, only after they click it.
+  ```
+- **scripting**
+  ```
+  Adds the "Hide elements" picker to the current tab. It outlines what's under the mouse and hides what the user clicks.
   ```
 - **offscreen**
   ```
