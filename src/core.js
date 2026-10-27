@@ -110,8 +110,8 @@ export function printParams(opts, metrics) {
     // Hand CDP portrait dimensions plus the flag. Wide dimensions with landscape:false
     // get rotated back to portrait when the site's @page says portrait.
     landscape: w > h,
-    // A chosen preset other than plain paper is deliberate, so it beats the site's @page.
-    preferCSSPageSize: PLAIN_PAPER.has(o.paper),
+    // Plain paper: the site's @page wins. Other sizes: our injected @page (forcedPageRule) wins.
+    preferCSSPageSize: true,
     scale: userScale,
     paperWidth: Math.min(w, h),
     paperHeight: Math.max(w, h),
@@ -140,8 +140,36 @@ export async function capturePdf(send, opts = {}) {
   if (ms) await evaluate(send, `new Promise(r => setTimeout(r, ${ms}))`);
   const metrics = await evaluate(send, MEASURE);
   const { title, url } = await evaluate(send, '({ title: document.title, url: location.href })');
-  const { stream } = await send('Page.printToPDF', printParams(o, metrics));
+  const rule = forcedPageRule(o, metrics);
+  if (rule) await evaluate(send, INJECT_PAGE_RULE(rule));
+  let stream;
+  try {
+    ({ stream } = await send('Page.printToPDF', printParams(o, metrics)));
+  } finally {
+    // The rule is page DOM, not CDP state, so detaching would leave it behind.
+    if (rule) await evaluate(send, REMOVE_PAGE_RULE).catch(() => {});
+  }
   return { chunks: await readStream(send, stream), title, url };
+}
+
+const PAGE_RULE_ID = 'p2p-page-size';
+const INJECT_PAGE_RULE = (css) => `(() => {
+  const s = document.createElement('style');
+  s.id = '${PAGE_RULE_ID}';
+  s.textContent = ${JSON.stringify(css)};
+  document.documentElement.append(s);
+})()`;
+const REMOVE_PAGE_RULE = `document.getElementById('${PAGE_RULE_ID}')?.remove()`;
+
+// Slide, window and custom sizes are deliberate choices, but a site's own
+// @page (size and orientation) beats printToPDF's paper settings. A later
+// @page rule of ours beats the site's. Plain paper leaves the site in charge.
+export function forcedPageRule(opts, metrics) {
+  const o = { ...DEFAULTS, ...opts };
+  if (o.layout === 'single' || PLAIN_PAPER.has(o.paper)) return null;
+  const [w, h] = paperSize(o, metrics);
+  const m = o.margins === 'normal' ? NORMAL_MARGIN_IN : 0;
+  return `@page { size: ${w}in ${h}in; margin: ${m}in; }`;
 }
 
 async function readStream(send, handle) {

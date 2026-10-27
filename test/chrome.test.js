@@ -73,6 +73,7 @@ test("a site's @page wins over plain paper but not over a slide preset", async (
   assert.ok(near(a4.boxes[0].width, 612) && near(a4.boxes[0].height, 792), JSON.stringify(a4.boxes[0]));
   const slide = await pdfOf(page, { paper: 'slide169' });
   assert.ok(near(slide.boxes[0].width, 960) && near(slide.boxes[0].height, 540), JSON.stringify(slide.boxes[0]));
+  assert.equal(await evalValue(page.send, "document.getElementById('p2p-page-size')"), null);
 });
 
 test('waiting lets an animation finish before the page is measured', async () => {

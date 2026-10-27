@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { LOAD_LAZY, MAX_PAGE_IN, MEASURE, capturePdf, decodeChunks, paperSize, pdfFilename, printParams, waitMs } from '../src/core.js';
+import { LOAD_LAZY, MAX_PAGE_IN, MEASURE, capturePdf, decodeChunks, forcedPageRule, paperSize, pdfFilename, printParams, waitMs } from '../src/core.js';
 
 const VIEW = { vw: 1440, vh: 810, width: 1440, height: 5000 };
 
@@ -122,7 +122,10 @@ test('single page honours scale, but the 200in viewer limit still wins', () => {
 
 test("slide and window presets give their aspect ratio and override the site's @page", () => {
   const slide = printParams({ paper: 'slide169' }, VIEW);
-  assert.deepEqual([slide.paperWidth, slide.paperHeight, slide.landscape, slide.preferCSSPageSize], [7.5, 13.333, true, false]);
+  assert.deepEqual([slide.paperWidth, slide.paperHeight, slide.landscape], [7.5, 13.333, true]);
+  assert.equal(forcedPageRule({ paper: 'slide169' }, VIEW), '@page { size: 13.333in 7.5in; margin: 0in; }');
+  assert.equal(forcedPageRule({ paper: 'letter' }, VIEW), null);
+  assert.equal(forcedPageRule({ paper: 'slide169', layout: 'single' }, VIEW), null);
   assert.deepEqual(paperSize({ paper: 'slide43' }, VIEW), [10, 7.5]);
   // One screen per page: a presentation's 100vh sections land one per page.
   assert.deepEqual(paperSize({ paper: 'window' }, VIEW), [15, 8.4375]);
@@ -158,4 +161,21 @@ test('no wait call at all when the wait is 0', async () => {
   const { send, calls } = fakeSend();
   await capturePdf(send, { loadLazy: false });
   assert.ok(!calls.some((c) => c.params?.expression?.includes('setTimeout(r,')));
+});
+
+test('the injected @page rule is removed even when printing fails, so the page is left as it was', async () => {
+  const calls = [];
+  const send = async (method, params) => {
+    calls.push(params?.expression ?? method);
+    if (method === 'Runtime.evaluate') {
+      return { result: { value: params.expression === MEASURE ? VIEW : { title: '', url: '' } } };
+    }
+    if (method === 'Page.printToPDF') throw new Error('print failed');
+    return {};
+  };
+  await assert.rejects(capturePdf(send, { paper: 'window', loadLazy: false }), /print failed/);
+  const inject = calls.findIndex((c) => c.includes("s.id = 'p2p-page-size'"));
+  const print = calls.indexOf('Page.printToPDF');
+  const remove = calls.findIndex((c) => c.includes("getElementById('p2p-page-size')?.remove()"));
+  assert.ok(inject >= 0 && inject < print && print < remove, JSON.stringify(calls));
 });
