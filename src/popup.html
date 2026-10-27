@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<form id="f">
+  <fieldset>
+    <legend>Layout</legend>
+    <label><input type="radio" name="layout" value="pages"> Pages</label>
+    <label><input type="radio" name="layout" value="single"> One long page</label>
+  </fieldset>
+
+  <div class="row paged">
+    <label>Paper
+      <select name="paper">
+        <option value="letter">Letter</option>
+        <option value="a4">A4</option>
+        <option value="legal">Legal</option>
+      </select>
+    </label>
+    <label>Margins
+      <select name="margins">
+        <option value="none">None</option>
+        <option value="normal">Normal</option>
+      </select>
+    </label>
+  </div>
+  <label class="paged"><input type="checkbox" name="landscape"> Landscape</label>
+
+  <fieldset>
+    <legend>Look</legend>
+    <label><input type="radio" name="media" value="screen"> As on screen</label>
+    <label><input type="radio" name="media" value="print"> Site's print style</label>
+  </fieldset>
+
+  <label><input type="checkbox" name="backgrounds"> Backgrounds &amp; colors</label>
+  <label><input type="checkbox" name="loadLazy"> Scroll first to load everything</label>
+  <label><input type="checkbox" name="saveAs"> Ask where to save</label>
+
+  <button type="submit">Save PDF</button>
+  <p id="status" role="status"></p>
+</form>
+<script type="module" src="popup.js"></script>
+</body>
+</html>
