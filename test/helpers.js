@@ -89,7 +89,7 @@ export async function waitFor(fn, { timeout = 15000, every = 100 } = {}) {
 export const evalValue = async (send, expression) =>
   (await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value;
 
-const LONG = `<!doctype html><title>Long test page</title>
+export const LONG = `<!doctype html><title>Long test page</title>
 <style>body{margin:0;font:16px sans-serif} p{height:100px;margin:0;border-bottom:1px solid #ccc}</style>
 ${Array.from({ length: 80 }, (_, i) => `<p>Paragraph ${i + 1}</p>`).join('')}
 <div id="end" style="height:40px;background:#c00">end</div>

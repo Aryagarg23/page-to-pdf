@@ -1,20 +1,21 @@
 // Loads the unpacked extension into Chrome for Testing (branded Chrome ignores
 // --load-extension) and drives the real service worker: debugger attach,
-// offscreen blob URL, chrome.downloads.
+// offscreen blob URL, chrome.downloads. The page is a data: URL so the test
+// needs no network.
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { evalValue, launch, pdfPages, serve, waitFor } from '../test/helpers.js';
+import { LONG, evalValue, launch, pdfPages, waitFor } from '../test/helpers.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BIN = process.env.CFT_BIN;
 if (!BIN) throw new Error('Set CFT_BIN to a Chrome for Testing binary (see README).');
+const PAGE = `data:text/html;base64,${Buffer.from(LONG).toString('base64')}`;
 
-let chrome, server, worker, downloads;
+let chrome, worker, downloads;
 before(async () => {
-  server = await serve();
   chrome = await launch({
     bin: BIN,
     args: [`--load-extension=${ROOT}`, `--disable-extensions-except=${ROOT}`],
@@ -33,14 +34,14 @@ before(async () => {
   });
   worker = await chrome.attach(sw.targetId);
 });
-after(async () => { await chrome?.close(); server?.close(); });
+after(async () => { await chrome?.close(); });
 
 async function saveViaWorker(opts) {
   const res = await worker.send('Runtime.evaluate', {
     awaitPromise: true,
     returnByValue: true,
     expression: `(async () => {
-      const [tab] = await chrome.tabs.query({ url: ${JSON.stringify(`${server.base}/*`)} });
+      const [tab] = await chrome.tabs.query({ title: 'Long test page' });
       const id = await savePdf(tab.id, ${JSON.stringify(opts)});
       for (;;) {
         const [d] = await chrome.downloads.search({ id });
@@ -55,7 +56,7 @@ async function saveViaWorker(opts) {
 }
 
 test('extension saves the tab as one long page into Downloads, named after the title', async () => {
-  const page = await chrome.openPage(`${server.base}/long`);
+  const page = await chrome.openPage(PAGE);
   const file = await saveViaWorker({ layout: 'single' });
   assert.equal(basename(file), 'Long test page.pdf');
   assert.equal(dirname(file), downloads);
@@ -63,12 +64,13 @@ test('extension saves the tab as one long page into Downloads, named after the t
   assert.equal(pdf.header, '%PDF-');
   assert.equal(pdf.count, 1);
   assert.equal(await evalValue(page.send, 'window.__seen'), true);
-  await page.send('Target.closeTarget', { targetId: page.targetId }).catch(() => {});
+  await chrome.send('Target.closeTarget', { targetId: page.targetId });
 });
 
-test('extension saves paged A4 output', async () => {
-  await chrome.openPage(`${server.base}/long`);
+test('extension saves paged A4 output, and a second save of the same title gets its own file', async () => {
+  await chrome.openPage(PAGE);
   const file = await saveViaWorker({ paper: 'a4', loadLazy: false });
+  assert.notEqual(basename(file), 'Long test page.pdf');
   const pdf = pdfPages(readFileSync(file));
   assert.ok(pdf.count > 1);
   for (const box of pdf.boxes) assert.ok(Math.abs(box.width - 595.44) < 1 && Math.abs(box.height - 841.68) < 1, JSON.stringify(box));
