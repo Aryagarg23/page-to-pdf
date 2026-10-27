@@ -41,7 +41,8 @@ async function saveViaWorker(opts) {
     awaitPromise: true,
     returnByValue: true,
     expression: `(async () => {
-      const [tab] = await chrome.tabs.query({ title: 'Long test page' });
+      // No "tabs" permission, so titles are hidden; the newest tab is the test page.
+      const tab = (await chrome.tabs.query({})).sort((a, b) => b.id - a.id)[0];
       const id = await savePdf(tab.id, ${JSON.stringify(opts)});
       for (;;) {
         const [d] = await chrome.downloads.search({ id });

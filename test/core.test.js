@@ -40,7 +40,9 @@ function fakeSend({ failRead = false } = {}) {
   const send = async (method, params) => {
     calls.push({ method, params });
     if (method === 'Runtime.evaluate') {
-      return { result: { value: params.expression === MEASURE ? { width: 800, height: 3000 } : undefined } };
+      if (params.expression === MEASURE) return { result: { value: { width: 800, height: 3000 } } };
+      if (params.expression.includes('document.title')) return { result: { value: { title: 'T', url: 'https://x.test/' } } };
+      return { result: { value: undefined } };
     }
     if (method === 'Page.printToPDF') return { stream: 'h1' };
     if (method === 'IO.read') {
@@ -57,15 +59,16 @@ test('media is emulated before measuring, so the measured height matches what pr
   const { send, calls } = fakeSend();
   await capturePdf(send, { layout: 'single', media: 'print' });
   const order = calls.map((c) => c.params?.expression === MEASURE ? 'measure' : c.params?.expression === LOAD_LAZY ? 'lazy' : c.method);
-  assert.deepEqual(order.slice(0, 4), ['Emulation.setEmulatedMedia', 'lazy', 'measure', 'Page.printToPDF']);
+  assert.deepEqual(order.slice(0, 5), ['Emulation.setEmulatedMedia', 'lazy', 'measure', 'Runtime.evaluate', 'Page.printToPDF']);
   assert.equal(calls[0].params.media, 'print');
-  assert.equal(calls[3].params.paperHeight, 3002 / 96);
+  assert.equal(calls[4].params.paperHeight, 3002 / 96);
 });
 
 test('stream is read to eof and returned as decodable chunks', async () => {
   const { send, calls } = fakeSend();
-  const { chunks } = await capturePdf(send, { loadLazy: false });
+  const { chunks, title, url } = await capturePdf(send, { loadLazy: false });
   assert.equal(new TextDecoder().decode(decodeChunks(chunks)), 'part1part2');
+  assert.deepEqual([title, url], ['T', 'https://x.test/']);
   assert.ok(!calls.some((c) => c.params?.expression === LOAD_LAZY));
   assert.equal(calls.at(-1).method, 'IO.close');
 });

@@ -33,21 +33,21 @@ function revokeWhenDone(downloadId, url) {
 
 export async function savePdf(tabId, opts) {
   const o = { ...DEFAULTS, ...opts };
-  const tab = await chrome.tabs.get(tabId);
   const target = { tabId };
   try {
     await chrome.debugger.attach(target, '1.3');
   } catch (e) {
     throw new Error(`Can't capture this tab (${e.message}). Chrome blocks extensions on chrome:// pages, the Web Store, and tabs with DevTools open.`);
   }
-  let chunks;
+  let capture;
   try {
-    ({ chunks } = await capturePdf((method, params) => chrome.debugger.sendCommand(target, method, params), o));
+    capture = await capturePdf((method, params) => chrome.debugger.sendCommand(target, method, params), o);
   } finally {
     await chrome.debugger.detach(target).catch(() => {});
   }
-  const url = await blobUrl(chunks);
-  const downloadId = await chrome.downloads.download({ url, filename: pdfFilename(tab.title, tab.url), saveAs: o.saveAs });
+  const url = await blobUrl(capture.chunks);
+  const filename = pdfFilename(capture.title, capture.url);
+  const downloadId = await chrome.downloads.download({ url, filename, saveAs: o.saveAs, conflictAction: 'uniquify' });
   revokeWhenDone(downloadId, url);
   return downloadId;
 }

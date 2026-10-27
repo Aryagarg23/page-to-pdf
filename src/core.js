@@ -90,15 +90,17 @@ async function evaluate(send, expression) {
   return res.result.value;
 }
 
-// Returns { chunks } — base64 strings, each independently decodable.
+// Returns { chunks, title, url }. chunks are base64 strings, each independently
+// decodable. title/url come from the page itself, so naming needs no "tabs" permission.
 // Emulated media is not restored: CDP overrides die with the debugger session.
 export async function capturePdf(send, opts = {}) {
   const o = { ...DEFAULTS, ...opts };
   await send('Emulation.setEmulatedMedia', { media: o.media });
   if (o.loadLazy) await evaluate(send, LOAD_LAZY);
   const metrics = o.layout === 'single' ? await evaluate(send, MEASURE) : null;
+  const { title, url } = await evaluate(send, '({ title: document.title, url: location.href })');
   const { stream } = await send('Page.printToPDF', printParams(o, metrics));
-  return { chunks: await readStream(send, stream) };
+  return { chunks: await readStream(send, stream), title, url };
 }
 
 async function readStream(send, handle) {
