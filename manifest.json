@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Save any web page as a PDF — paged or as one long page. No account, no subscription.",
   "minimum_chrome_version": "116",
-  "permissions": ["debugger", "activeTab", "downloads", "storage", "offscreen"],
+  "permissions": ["debugger", "downloads", "storage", "offscreen"],
   "background": { "service_worker": "src/background.js", "type": "module" },
   "action": { "default_title": "Save page as PDF", "default_popup": "src/popup.html" },
   "commands": {
