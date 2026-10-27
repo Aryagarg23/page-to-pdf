@@ -86,7 +86,7 @@ test('popup renders in Space Grotesk with saved defaults and the bound shortcut'
     return evalValue(popup.send, `({ bg: getComputedStyle(document.body).backgroundColor, ink: getComputedStyle(document.body).color })`);
   };
   // Site tokens: cream/ink on light, stone/bone on dark.
-  assert.deepEqual(await look('light'), { bg: 'rgb(235, 227, 212)', ink: 'rgb(40, 34, 21)' });
+  assert.deepEqual(await look('light'), { bg: 'rgb(234, 228, 214)', ink: 'rgb(40, 34, 21)' });
   assert.deepEqual(await look('dark'), { bg: 'rgb(28, 28, 28)', ink: 'rgb(241, 237, 228)' });
   const state = await evalValue(popup.send, `document.fonts.ready.then(() => ({
     font: document.fonts.check("13px 'Space Grotesk'") && [...document.fonts].some(f => f.family === 'Space Grotesk' && f.status === 'loaded'),

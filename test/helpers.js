@@ -13,7 +13,10 @@ export async function launch({ bin = CHROME, args = [], prepareProfile } = {}) {
   prepareProfile?.(dir);
   const proc = spawn(bin, [
     '--headless=new', '--remote-debugging-port=0', `--user-data-dir=${dir}`,
-    '--no-first-run', '--no-default-browser-check', ...args, 'about:blank',
+    '--no-first-run', '--no-default-browser-check',
+    // Keep test browsers out of the macOS login keychain (no "Safe Storage" password prompt).
+    '--use-mock-keychain', '--password-store=basic',
+    ...args, 'about:blank',
   ], { stdio: ['ignore', 'ignore', 'pipe'] });
   const wsUrl = await new Promise((resolve, reject) => {
     let log = '';
