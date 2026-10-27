@@ -41,8 +41,11 @@ const foot = document.querySelector('.foot');
 const save = (await chrome.commands.getAll()).find((c) => c.name === 'save-pdf');
 if (save?.shortcut) {
   foot.textContent = '';
-  save.shortcut.split('+').forEach((key, i) => {
-    if (i) foot.append('+');
+  // Windows/Linux report "Alt+Shift+P"; macOS reports "⌥⇧P" with no separators.
+  const sep = save.shortcut.includes('+') ? '+' : '';
+  const keys = sep ? save.shortcut.split('+') : [...save.shortcut];
+  keys.forEach((key, i) => {
+    if (i) foot.append(sep);
     const kbd = document.createElement('kbd');
     kbd.textContent = key;
     foot.append(kbd);

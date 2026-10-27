@@ -81,20 +81,28 @@ test('popup renders in Space Grotesk with saved defaults and the bound shortcut'
   const { targetInfos } = await chrome.send('Target.getTargets');
   const sw = targetInfos.find((t) => t.type === 'service_worker' && t.url.endsWith('/src/background.js'));
   const popup = await chrome.openPage(sw.url.replace('/src/background.js', '/src/popup.html'));
+  const look = async (scheme) => {
+    await popup.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] });
+    return evalValue(popup.send, `({ bg: getComputedStyle(document.body).backgroundColor, ink: getComputedStyle(document.body).color })`);
+  };
+  // Site tokens: cream/ink on light, stone/bone on dark.
+  assert.deepEqual(await look('light'), { bg: 'rgb(235, 227, 212)', ink: 'rgb(40, 34, 21)' });
+  assert.deepEqual(await look('dark'), { bg: 'rgb(28, 28, 28)', ink: 'rgb(241, 237, 228)' });
   const state = await evalValue(popup.send, `document.fonts.ready.then(() => ({
     font: document.fonts.check("13px 'Space Grotesk'") && [...document.fonts].some(f => f.family === 'Space Grotesk' && f.status === 'loaded'),
     layout: document.querySelector('[name=layout]:checked').value,
     media: document.querySelector('[name=media]:checked').value,
+    keys: [...document.querySelectorAll('.foot kbd')].map(k => k.textContent),
     foot: document.querySelector('.foot').textContent,
     radius: getComputedStyle(document.querySelector('button')).borderRadius,
-    bg: getComputedStyle(document.body).backgroundColor,
   }))`);
+  const mac = process.platform === 'darwin';
   assert.deepEqual(state, {
     font: true,
     layout: 'pages',
     media: 'screen',
-    foot: 'Alt+Shift+P saves with these settings',
+    keys: mac ? ['⌥', '⇧', 'P'] : ['Alt', 'Shift', 'P'],
+    foot: mac ? '⌥⇧P saves with these settings' : 'Alt+Shift+P saves with these settings',
     radius: '0px',
-    bg: 'rgb(235, 227, 212)',
   });
 });
