@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <rect width="128" height="128" fill="#eae4d6"/>
+  <g fill="none" stroke="#282215" stroke-width="8" stroke-linejoin="miter" stroke-linecap="square">
+    <path d="M30 14 H76 L98 36 V114 H30 Z"/>
+    <path d="M76 14 V36 H98"/>
+  </g>
+  <g fill="none" stroke="#3b42db" stroke-width="9" stroke-linejoin="miter" stroke-linecap="butt">
+    <path d="M64 46 V92"/>
+    <path d="M47 75 L64 92 L81 75"/>
+  </g>
+</svg>

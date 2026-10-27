@@ -4,13 +4,37 @@
   "version": "0.1.0",
   "description": "Save any web page as a PDF — paged or as one long page. No account, no subscription.",
   "minimum_chrome_version": "116",
-  "permissions": ["debugger", "downloads", "storage", "offscreen"],
-  "background": { "service_worker": "src/background.js", "type": "module" },
-  "action": { "default_title": "Save page as PDF", "default_popup": "src/popup.html" },
+  "permissions": [
+    "debugger",
+    "downloads",
+    "storage",
+    "offscreen"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Save page as PDF",
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
   "commands": {
     "save-pdf": {
-      "suggested_key": { "default": "Alt+Shift+P" },
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
       "description": "Save the current tab as PDF with your last settings"
     }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }

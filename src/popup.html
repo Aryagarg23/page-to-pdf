@@ -4,43 +4,54 @@
 <meta charset="utf-8">
 <link rel="stylesheet" href="popup.css">
 </head>
-<body>
+<body class="paper">
 <form id="f">
+  <header>
+    <p class="eyebrow">Page → PDF</p>
+    <h1>Save this page</h1>
+  </header>
+
   <fieldset>
-    <legend>Layout</legend>
-    <label><input type="radio" name="layout" value="pages"> Pages</label>
-    <label><input type="radio" name="layout" value="single"> One long page</label>
+    <legend class="eyebrow">Layout</legend>
+    <div class="seg">
+      <label><input type="radio" name="layout" value="pages"><span>Pages</span></label>
+      <label><input type="radio" name="layout" value="single"><span>One long page</span></label>
+    </div>
   </fieldset>
 
-  <div class="row paged">
-    <label>Paper
-      <select name="paper">
+  <fieldset class="paged">
+    <legend class="eyebrow">Paper</legend>
+    <div class="row">
+      <select name="paper" aria-label="Paper size">
         <option value="letter">Letter</option>
         <option value="a4">A4</option>
         <option value="legal">Legal</option>
       </select>
-    </label>
-    <label>Margins
-      <select name="margins">
-        <option value="none">None</option>
-        <option value="normal">Normal</option>
+      <select name="margins" aria-label="Margins">
+        <option value="none">No margins</option>
+        <option value="normal">Margins</option>
       </select>
-    </label>
-  </div>
-  <label class="paged"><input type="checkbox" name="landscape"> Landscape</label>
-
-  <fieldset>
-    <legend>Look</legend>
-    <label><input type="radio" name="media" value="screen"> As on screen</label>
-    <label><input type="radio" name="media" value="print"> Site's print style</label>
+    </div>
+    <label class="check"><input type="checkbox" name="landscape"> Landscape</label>
   </fieldset>
 
-  <label><input type="checkbox" name="backgrounds"> Backgrounds &amp; colors</label>
-  <label><input type="checkbox" name="loadLazy"> Scroll first to load everything</label>
-  <label><input type="checkbox" name="saveAs"> Ask where to save</label>
+  <fieldset>
+    <legend class="eyebrow">Look</legend>
+    <div class="seg">
+      <label><input type="radio" name="media" value="screen"><span>As on screen</span></label>
+      <label><input type="radio" name="media" value="print"><span>Print style</span></label>
+    </div>
+  </fieldset>
+
+  <fieldset class="checks">
+    <label class="check"><input type="checkbox" name="backgrounds"> Backgrounds &amp; colors</label>
+    <label class="check"><input type="checkbox" name="loadLazy"> Scroll first to load everything</label>
+    <label class="check"><input type="checkbox" name="saveAs"> Ask where to save</label>
+  </fieldset>
 
   <button type="submit">Save PDF</button>
   <p id="status" role="status"></p>
+  <p class="foot eyebrow"><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> saves with these settings</p>
 </form>
 <script type="module" src="popup.js"></script>
 </body>

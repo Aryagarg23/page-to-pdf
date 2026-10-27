@@ -76,3 +76,25 @@ test('extension saves paged A4 output, and a second save of the same title gets 
   assert.ok(pdf.count > 1);
   for (const box of pdf.boxes) assert.ok(Math.abs(box.width - 595.44) < 1 && Math.abs(box.height - 841.68) < 1, JSON.stringify(box));
 });
+
+test('popup renders in Space Grotesk with saved defaults and the bound shortcut', async () => {
+  const { targetInfos } = await chrome.send('Target.getTargets');
+  const sw = targetInfos.find((t) => t.type === 'service_worker' && t.url.endsWith('/src/background.js'));
+  const popup = await chrome.openPage(sw.url.replace('/src/background.js', '/src/popup.html'));
+  const state = await evalValue(popup.send, `document.fonts.ready.then(() => ({
+    font: document.fonts.check("13px 'Space Grotesk'") && [...document.fonts].some(f => f.family === 'Space Grotesk' && f.status === 'loaded'),
+    layout: document.querySelector('[name=layout]:checked').value,
+    media: document.querySelector('[name=media]:checked').value,
+    foot: document.querySelector('.foot').textContent,
+    radius: getComputedStyle(document.querySelector('button')).borderRadius,
+    bg: getComputedStyle(document.body).backgroundColor,
+  }))`);
+  assert.deepEqual(state, {
+    font: true,
+    layout: 'pages',
+    media: 'screen',
+    foot: 'Alt+Shift+P saves with these settings',
+    radius: '0px',
+    bg: 'rgb(235, 227, 212)',
+  });
+});

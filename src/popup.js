@@ -36,6 +36,22 @@ const { opts } = await chrome.storage.sync.get('opts');
 write({ ...DEFAULTS, ...opts });
 syncDisabled();
 
+// Show the shortcut the user actually has bound, not the suggested default.
+const foot = document.querySelector('.foot');
+const save = (await chrome.commands.getAll()).find((c) => c.name === 'save-pdf');
+if (save?.shortcut) {
+  foot.textContent = '';
+  save.shortcut.split('+').forEach((key, i) => {
+    if (i) foot.append('+');
+    const kbd = document.createElement('kbd');
+    kbd.textContent = key;
+    foot.append(kbd);
+  });
+  foot.append(' saves with these settings');
+} else {
+  foot.hidden = true;
+}
+
 form.addEventListener('change', () => {
   syncDisabled();
   chrome.storage.sync.set({ opts: read() });
