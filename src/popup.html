@@ -20,19 +20,35 @@
   </fieldset>
 
   <fieldset class="paged">
-    <legend class="eyebrow">Paper</legend>
+    <legend class="eyebrow">Page size</legend>
     <div class="row">
-      <select name="paper" aria-label="Paper size">
+      <select name="paper" aria-label="Page size">
         <option value="letter">Letter</option>
         <option value="a4">A4</option>
         <option value="legal">Legal</option>
+        <option value="slide169">Slide 16:9</option>
+        <option value="slide43">Slide 4:3</option>
+        <option value="window">Window size</option>
+        <option value="custom">Custom…</option>
       </select>
       <select name="margins" aria-label="Margins">
         <option value="none">No margins</option>
         <option value="normal">Margins</option>
       </select>
     </div>
-    <label class="check"><input type="checkbox" name="landscape"> Landscape</label>
+    <div class="row custom">
+      <label class="num">W <input type="number" name="customWidth" min="1" max="200" step="0.1"> in</label>
+      <label class="num">H <input type="number" name="customHeight" min="1" max="200" step="0.1"> in</label>
+    </div>
+    <label class="check orient"><input type="checkbox" name="landscape"> Landscape</label>
+  </fieldset>
+
+  <fieldset>
+    <legend class="eyebrow">Scale &amp; timing</legend>
+    <div class="row">
+      <label class="num">Scale <input type="number" name="scale" min="10" max="200" step="5"> %</label>
+      <label class="num">Wait <input type="number" name="delay" min="0" max="30" step="0.5"> s</label>
+    </div>
   </fieldset>
 
   <fieldset>
@@ -49,7 +65,10 @@
     <label class="check"><input type="checkbox" name="saveAs"> Ask where to save</label>
   </fieldset>
 
-  <button type="submit">Save PDF</button>
+  <div class="actions">
+    <button type="button" id="pick" class="ghost">Hide elements…</button>
+    <button type="submit">Save PDF</button>
+  </div>
   <p id="status" role="status"></p>
   <p class="foot eyebrow"><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> saves with these settings</p>
 </form>

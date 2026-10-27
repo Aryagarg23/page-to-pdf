@@ -98,14 +98,26 @@ ${Array.from({ length: 80 }, (_, i) => `<p>Paragraph ${i + 1}</p>`).join('')}
 <div id="end" style="height:40px;background:#c00">end</div>
 <script>
   window.__seen = false;
+  window.__clicks = 0;
+  document.addEventListener('click', () => { window.__clicks++; });
   new IntersectionObserver(([e]) => { if (e.isIntersecting) window.__seen = true; }).observe(document.getElementById('end'));
 </script>`;
 
+// Site that asks for Letter via @page.
+const AT_PAGE = LONG.replace('<style>', '<style>@page { size: letter; }');
+
+// A block that grows from 0 to 3000px over 600ms after load, like a reveal animation.
+const GROW = `<!doctype html><title>Grow</title>
+<style>body{margin:0} #g{height:0;background:#36c;animation:grow 600ms 100ms ease forwards}
+@keyframes grow{to{height:3000px}}</style><div id="g"></div>`;
+
+const PAGES = { '/long': LONG, '/atpage': AT_PAGE, '/grow': GROW };
+
 export async function serve() {
   const server = createServer((req, res) => {
-    if (req.url === '/long') {
-      res.writeHead(200, { 'content-type': 'text/html' });
-      res.end(LONG);
+    if (PAGES[req.url]) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(PAGES[req.url]);
     } else {
       res.writeHead(404).end();
     }

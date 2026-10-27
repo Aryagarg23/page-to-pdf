@@ -4,8 +4,12 @@
 
 export const DEFAULTS = {
   layout: 'pages', // 'pages' | 'single' (one tall page, no breaks)
-  paper: 'letter', // key of PAPER
+  paper: 'letter', // key of PAPER | 'window' (one screen per page) | 'custom'
+  customWidth: 8.5, // inches, paper: 'custom'
+  customHeight: 11,
   landscape: false,
+  scale: 100, // percent, 10–200
+  delay: 0, // seconds to wait after loading, so animations can finish
   media: 'screen', // 'screen' (what you see) | 'print' (site's print stylesheet)
   backgrounds: true,
   margins: 'none', // 'none' | 'normal'
@@ -13,13 +17,21 @@ export const DEFAULTS = {
   saveAs: false,
 };
 
-export const PAPER = { letter: [8.5, 11], a4: [8.27, 11.69], legal: [8.5, 14] };
+export const PAPER = {
+  letter: [8.5, 11],
+  a4: [8.27, 11.69],
+  legal: [8.5, 14],
+  slide169: [13.333, 7.5],
+  slide43: [10, 7.5],
+};
 
 const PX_PER_IN = 96;
 // Acrobat and most viewers refuse pages taller than 200in (14400pt).
 export const MAX_PAGE_IN = 200;
-// Page.printToPDF rejects scale below 0.1.
+// Page.printToPDF rejects scale outside 0.1–2.
 const MIN_SCALE = 0.1;
+const MAX_SCALE = 2;
+const MAX_DELAY_S = 30;
 const NORMAL_MARGIN_IN = 0.4;
 
 // Scroll the whole page so lazy images / infinite-ish sections render,
@@ -45,19 +57,41 @@ export const LOAD_LAZY = `(async () => {
 })()`;
 
 export const MEASURE = `({
+  vw: innerWidth,
+  vh: innerHeight,
   width: document.documentElement.clientWidth,
   height: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
 })`;
 
+const PLAIN_PAPER = new Set(['letter', 'a4', 'legal']);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const num = (v, fallback) => (Number.isFinite(+v) && v !== '' && v !== null ? +v : fallback);
+
+export const waitMs = (opts) => Math.round(clamp(num(opts.delay, 0), 0, MAX_DELAY_S) * 1000);
+
+// Inches, before margins. Landscape puts the long side across.
+export function paperSize(opts, metrics) {
+  const o = { ...DEFAULTS, ...opts };
+  let w, h;
+  if (o.paper === 'window') [w, h] = [metrics.vw / PX_PER_IN, metrics.vh / PX_PER_IN];
+  else if (o.paper === 'custom') {
+    w = clamp(num(o.customWidth, DEFAULTS.customWidth), 1, MAX_PAGE_IN);
+    h = clamp(num(o.customHeight, DEFAULTS.customHeight), 1, MAX_PAGE_IN);
+  } else [w, h] = PAPER[o.paper] ?? PAPER.letter;
+  if (o.landscape && h > w) [w, h] = [h, w];
+  return [w, h];
+}
+
 export function printParams(opts, metrics) {
   const o = { ...DEFAULTS, ...opts };
   const base = { printBackground: o.backgrounds, transferMode: 'ReturnAsStream' };
+  const userScale = clamp(num(o.scale, 100) / 100, MIN_SCALE, MAX_SCALE);
 
   if (o.layout === 'single') {
     const wIn = metrics.width / PX_PER_IN;
     // +2px absorbs px→pt rounding that otherwise spills a blank second page.
     const hIn = (metrics.height + 2) / PX_PER_IN;
-    const scale = Math.max(MIN_SCALE, Math.min(1, MAX_PAGE_IN / hIn));
+    const scale = clamp(Math.min(userScale, MAX_PAGE_IN / hIn), MIN_SCALE, MAX_SCALE);
     return {
       ...base,
       landscape: false,
@@ -69,12 +103,15 @@ export function printParams(opts, metrics) {
     };
   }
 
-  const [w, h] = PAPER[o.paper] ?? PAPER.letter;
+  const [w, h] = paperSize(o, metrics);
   const m = o.margins === 'normal' ? NORMAL_MARGIN_IN : 0;
   return {
     ...base,
-    landscape: o.landscape,
-    preferCSSPageSize: true,
+    // Orientation is already baked into paperSize; CDP's flag would swap it back.
+    landscape: false,
+    // A chosen preset other than plain paper is deliberate, so it beats the site's @page.
+    preferCSSPageSize: PLAIN_PAPER.has(o.paper),
+    scale: userScale,
     paperWidth: w,
     paperHeight: h,
     marginTop: m, marginBottom: m, marginLeft: m, marginRight: m,
@@ -97,7 +134,10 @@ export async function capturePdf(send, opts = {}) {
   const o = { ...DEFAULTS, ...opts };
   await send('Emulation.setEmulatedMedia', { media: o.media });
   if (o.loadLazy) await evaluate(send, LOAD_LAZY);
-  const metrics = o.layout === 'single' ? await evaluate(send, MEASURE) : null;
+  const ms = waitMs(o);
+  // Waits in the page's own clock, after scrolling has triggered reveal animations.
+  if (ms) await evaluate(send, `new Promise(r => setTimeout(r, ${ms}))`);
+  const metrics = await evaluate(send, MEASURE);
   const { title, url } = await evaluate(send, '({ title: document.title, url: location.href })');
   const { stream } = await send('Page.printToPDF', printParams(o, metrics));
   return { chunks: await readStream(send, stream), title, url };

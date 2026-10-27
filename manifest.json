@@ -1,14 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Page to PDF",
-  "version": "0.1.0",
-  "description": "Save any web page as a PDF — paged or as one long page. No account, no subscription.",
+  "version": "0.2.0",
+  "description": "Save any web page as a PDF. Pages or one long page, your own scale and page size, wait for animations, hide what you don't want.",
   "minimum_chrome_version": "116",
   "permissions": [
     "debugger",
     "downloads",
     "storage",
-    "offscreen"
+    "offscreen",
+    "activeTab",
+    "scripting"
   ],
   "background": {
     "service_worker": "src/background.js",

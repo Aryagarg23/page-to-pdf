@@ -8,7 +8,9 @@ function read() {
   const o = {};
   for (const key of Object.keys(DEFAULTS)) {
     const el = form.elements[key];
-    o[key] = el.type === 'checkbox' ? el.checked : el.value;
+    if (el.type === 'checkbox') o[key] = el.checked;
+    else if (el.type === 'number') o[key] = Number.isNaN(el.valueAsNumber) ? DEFAULTS[key] : el.valueAsNumber;
+    else o[key] = el.value;
   }
   return o;
 }
@@ -22,9 +24,15 @@ function write(o) {
   }
 }
 
+// Slides and window size already fix the orientation.
+const FIXED_ORIENTATION = new Set(['slide169', 'slide43', 'window']);
+
 function syncDisabled() {
   const single = form.elements.layout.value === 'single';
+  const paper = form.elements.paper.value;
   for (const el of form.querySelectorAll('.paged')) el.classList.toggle('off', single);
+  form.querySelector('.custom').hidden = paper !== 'custom';
+  form.querySelector('.orient').classList.toggle('off', FIXED_ORIENTATION.has(paper));
 }
 
 function say(text, isError = false) {
@@ -58,6 +66,16 @@ if (save?.shortcut) {
 form.addEventListener('change', () => {
   syncDisabled();
   chrome.storage.sync.set({ opts: read() });
+});
+
+document.getElementById('pick').addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['src/picker.js'] });
+    window.close();
+  } catch (e) {
+    say(`Can't pick on this page (${e.message})`, true);
+  }
 });
 
 form.addEventListener('submit', async (e) => {

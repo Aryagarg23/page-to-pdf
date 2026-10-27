@@ -54,8 +54,14 @@ export async function savePdf(tabId, opts) {
 // Reachable from the extension's service-worker console and the e2e test.
 globalThis.savePdf = savePdf;
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+// From the popup: { tabId, opts }, answered with the result.
+// From the picker's Save button: no tabId or opts; use the sender's tab and saved settings.
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.target !== 'background' || msg.type !== 'save') return;
+  if (!msg.opts) {
+    loadOptions().then((opts) => saveWithBadge(sender.tab.id, opts));
+    return;
+  }
   savePdf(msg.tabId, msg.opts).then(
     (downloadId) => sendResponse({ ok: true, downloadId }),
     (e) => sendResponse({ ok: false, error: e.message }),
@@ -69,14 +75,18 @@ async function flashBadge(tabId, text, color) {
   if (text !== '…') setTimeout(() => chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {}), 4000);
 }
 
-chrome.commands.onCommand.addListener(async (command, tab) => {
-  if (command !== 'save-pdf' || !tab?.id) return;
-  await flashBadge(tab.id, '…', '#666');
+async function saveWithBadge(tabId, opts) {
+  await flashBadge(tabId, '…', '#666');
   try {
-    await savePdf(tab.id, await loadOptions());
-    await flashBadge(tab.id, '✓', '#1a7f37');
+    await savePdf(tabId, opts);
+    await flashBadge(tabId, '✓', '#1a7f37');
   } catch (e) {
     console.error(e);
-    await flashBadge(tab.id, '!', '#c62828');
+    await flashBadge(tabId, '!', '#c62828');
   }
+}
+
+chrome.commands.onCommand.addListener(async (command, tab) => {
+  if (command !== 'save-pdf' || !tab?.id) return;
+  await saveWithBadge(tab.id, await loadOptions());
 });
