@@ -16,6 +16,8 @@ export async function launch({ bin = CHROME, args = [], prepareProfile } = {}) {
     '--no-first-run', '--no-default-browser-check',
     // Keep test browsers out of the macOS login keychain (no "Safe Storage" password prompt).
     '--use-mock-keychain', '--password-store=basic',
+    // GitHub's Ubuntu runners block Chrome's user-namespace sandbox.
+    ...(process.env.CI ? ['--no-sandbox'] : []),
     ...args, 'about:blank',
   ], { stdio: ['ignore', 'ignore', 'pipe'] });
   const wsUrl = await new Promise((resolve, reject) => {

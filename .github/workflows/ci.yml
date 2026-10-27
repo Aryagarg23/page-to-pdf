@@ -1,0 +1,72 @@
+name: Test and publish
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Unit and real-Chrome tests
+        run: npm test
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+      - name: Install Chrome for Testing
+        run: |
+          out=$(npx -y @puppeteer/browsers@2 install chrome@stable --path "$RUNNER_TEMP/cft")
+          echo "$out"
+          echo "CFT_BIN=$(echo "$out" | tail -1 | cut -d' ' -f2-)" >> "$GITHUB_ENV"
+      - name: Extension end-to-end tests
+        run: npm run e2e
+
+  # Publishes when manifest.json has a version with no git tag yet.
+  publish:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+      CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+      CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+      CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+      CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Is this a new version?
+        id: check
+        run: |
+          v=$(node -p "require('./manifest.json').version")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then
+            echo "v$v is already released; nothing to publish."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "$CWS_REFRESH_TOKEN" ]; then
+            echo "::warning::Chrome Web Store secrets are not set; skipping publish of v$v."
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Package
+        if: steps.check.outputs.new == 'true'
+        run: npm run package
+      - name: Upload and submit for review
+        if: steps.check.outputs.new == 'true'
+        run: node tools/publish.mjs dist/page-to-pdf.zip
+      - name: Tag the release
+        if: steps.check.outputs.new == 'true'
+        run: |
+          git tag "v${{ steps.check.outputs.version }}"
+          git push origin "v${{ steps.check.outputs.version }}"
