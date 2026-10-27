@@ -31,6 +31,10 @@
 
 * { box-sizing: border-box; border-radius: var(--radius); }
 
+/* html needs its own background: otherwise body's propagates to the canvas,
+   body paints nothing, and the overlay grain lands on transparent as a gray wash. */
+html { background: var(--paper); }
+
 body {
   margin: 0;
   width: 296px;
@@ -127,7 +131,8 @@ button {
 button:hover:not(:disabled) { background: var(--emphasis); border-color: var(--emphasis); color: var(--paper); }
 button:disabled { opacity: 0.4; cursor: progress; }
 
-#status { margin: -4px 0 0; min-height: 18px; font-size: 12px; color: var(--emphasis); }
+#status { margin: -6px 0 0; min-height: 0; font-size: 12px; color: var(--emphasis); }
+#status:empty { display: none; }
 #status.err { color: var(--hot); }
 
 .foot { border-top: 1px solid var(--rule); padding-top: 8px; letter-spacing: 0.08em; }

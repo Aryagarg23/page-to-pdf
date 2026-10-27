@@ -14,7 +14,8 @@ const fontUrl = `data:font/woff2;base64,${readFileSync(join(ROOT, 'src/fonts/spa
 async function shoot(page, width, height, { scale = 1, dark = false } = {}) {
   await page.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: scale, mobile: false });
   await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: dark ? 'dark' : 'light' }] });
-  await page.send('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))', awaitPromise: true });
+  // Wait out the popup's 150ms color transitions that the scheme switch just started.
+  await page.send('Runtime.evaluate', { expression: 'document.fonts.ready.then(() => new Promise(r => setTimeout(r, 400)))', awaitPromise: true });
   const { data } = await page.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   return Buffer.from(data, 'base64');
 }
@@ -31,7 +32,7 @@ async function icons() {
   }
 }
 
-const FRAME = (popupPng, popupW) => `<!doctype html><style>
+const FRAME = (popupPng, popupW) => `<!doctype html><meta charset="utf-8"><style>
 @font-face{font-family:SG;src:url(${fontUrl});font-weight:300 700}
 html,body{margin:0;width:1280px;height:800px;background:#eae4d6;color:#282215;font-family:SG,sans-serif}
 .wrap{display:grid;grid-template-columns:1fr ${popupW}px;gap:72px;align-items:center;height:100%;padding:0 96px;box-sizing:border-box}
@@ -44,7 +45,7 @@ img{width:${popupW}px;border:1px solid #c6b99f;display:block}
 <ul><li>Pages, or one long page with no breaks</li><li>Looks like the screen, or the site's print style</li><li>No account. Nothing leaves your browser.</li></ul></div>
 <img src="data:image/png;base64,${popupPng.toString('base64')}"></div>`;
 
-const PROMO = `<!doctype html><style>
+const PROMO = `<!doctype html><meta charset="utf-8"><style>
 @font-face{font-family:SG;src:url(${fontUrl});font-weight:300 700}
 html,body{margin:0;width:440px;height:280px;background:#eae4d6;color:#282215;font-family:SG,sans-serif}
 .wrap{display:flex;gap:28px;align-items:center;height:100%;padding:0 36px;box-sizing:border-box}

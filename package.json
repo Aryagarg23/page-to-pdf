@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test 'test/*.test.js'",
-    "e2e": "node --test --test-concurrency=1 'e2e/*.test.js'"
+    "e2e": "node --test --test-concurrency=1 'e2e/*.test.js'",
+    "package": "rm -f dist/page-to-pdf.zip && mkdir -p dist && zip -qr dist/page-to-pdf.zip manifest.json src icons/icon16.png icons/icon32.png icons/icon48.png icons/icon128.png -x '.*' && unzip -l dist/page-to-pdf.zip"
   }
 }
