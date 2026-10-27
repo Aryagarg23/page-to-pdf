@@ -28,10 +28,9 @@ test('single page scale never drops below the 0.1 printToPDF floor', () => {
 
 test('paged mode uses chosen paper, orientation and margins and honours @page', () => {
   const p = printParams({ paper: 'a4', landscape: true, margins: 'normal', backgrounds: false }, VIEW);
-  assert.equal(p.paperWidth, 11.69);
-  assert.equal(p.paperHeight, 8.27);
-  // Orientation lives in the paper size; passing CDP's landscape too would rotate it back.
-  assert.equal(p.landscape, false);
+  assert.equal(p.paperWidth, 8.27);
+  assert.equal(p.paperHeight, 11.69);
+  assert.equal(p.landscape, true);
   assert.equal(p.marginLeft, 0.4);
   assert.equal(p.printBackground, false);
   assert.equal(p.preferCSSPageSize, true);
@@ -123,7 +122,7 @@ test('single page honours scale, but the 200in viewer limit still wins', () => {
 
 test("slide and window presets give their aspect ratio and override the site's @page", () => {
   const slide = printParams({ paper: 'slide169' }, VIEW);
-  assert.deepEqual([slide.paperWidth, slide.paperHeight, slide.preferCSSPageSize], [13.333, 7.5, false]);
+  assert.deepEqual([slide.paperWidth, slide.paperHeight, slide.landscape, slide.preferCSSPageSize], [7.5, 13.333, true, false]);
   assert.deepEqual(paperSize({ paper: 'slide43' }, VIEW), [10, 7.5]);
   // One screen per page: a presentation's 100vh sections land one per page.
   assert.deepEqual(paperSize({ paper: 'window' }, VIEW), [15, 8.4375]);

@@ -107,13 +107,14 @@ export function printParams(opts, metrics) {
   const m = o.margins === 'normal' ? NORMAL_MARGIN_IN : 0;
   return {
     ...base,
-    // Orientation is already baked into paperSize; CDP's flag would swap it back.
-    landscape: false,
+    // Hand CDP portrait dimensions plus the flag. Wide dimensions with landscape:false
+    // get rotated back to portrait when the site's @page says portrait.
+    landscape: w > h,
     // A chosen preset other than plain paper is deliberate, so it beats the site's @page.
     preferCSSPageSize: PLAIN_PAPER.has(o.paper),
     scale: userScale,
-    paperWidth: w,
-    paperHeight: h,
+    paperWidth: Math.min(w, h),
+    paperHeight: Math.max(w, h),
     marginTop: m, marginBottom: m, marginLeft: m, marginRight: m,
   };
 }
