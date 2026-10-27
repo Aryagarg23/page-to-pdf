@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { LOAD_LAZY, MAX_PAGE_IN, MEASURE, capturePdf, decodeChunks, pdfFilename, printParams } from '../src/core.js';
+import { LOAD_LAZY, MAX_PAGE_IN, MEASURE, capturePdf, decodeChunks, paperSize, pdfFilename, printParams, waitMs } from '../src/core.js';
+
+const VIEW = { vw: 1440, vh: 810, width: 1440, height: 5000 };
 
 test('single page is sized to the content at viewport width, with no margins', () => {
   const p = printParams({ layout: 'single', landscape: true, margins: 'normal' }, { width: 1200, height: 5000 });
@@ -25,10 +27,11 @@ test('single page scale never drops below the 0.1 printToPDF floor', () => {
 });
 
 test('paged mode uses chosen paper, orientation and margins and honours @page', () => {
-  const p = printParams({ paper: 'a4', landscape: true, margins: 'normal', backgrounds: false }, null);
-  assert.equal(p.paperWidth, 8.27);
-  assert.equal(p.paperHeight, 11.69);
-  assert.equal(p.landscape, true);
+  const p = printParams({ paper: 'a4', landscape: true, margins: 'normal', backgrounds: false }, VIEW);
+  assert.equal(p.paperWidth, 11.69);
+  assert.equal(p.paperHeight, 8.27);
+  // Orientation lives in the paper size; passing CDP's landscape too would rotate it back.
+  assert.equal(p.landscape, false);
   assert.equal(p.marginLeft, 0.4);
   assert.equal(p.printBackground, false);
   assert.equal(p.preferCSSPageSize, true);
@@ -99,4 +102,61 @@ test('filenames are safe for chrome.downloads', () => {
   assert.equal(pdfFilename('', 'https://example.org/x'), 'example.org.pdf');
   assert.equal(pdfFilename('', 'not a url'), 'page.pdf');
   assert.equal(pdfFilename('x'.repeat(300), '').length, 124);
+});
+
+test('scale is a percent, clamped to what printToPDF accepts', () => {
+  assert.equal(printParams({ scale: 50 }, VIEW).scale, 0.5);
+  assert.equal(printParams({ scale: 5 }, VIEW).scale, 0.1);
+  assert.equal(printParams({ scale: 500 }, VIEW).scale, 2);
+  assert.equal(printParams({ scale: '' }, VIEW).scale, 1);
+  assert.equal(printParams({ scale: 'abc' }, VIEW).scale, 1);
+});
+
+test('single page honours scale, but the 200in viewer limit still wins', () => {
+  const half = printParams({ layout: 'single', scale: 50 }, { width: 1200, height: 4798 });
+  assert.equal(half.scale, 0.5);
+  assert.equal(half.paperWidth, 1200 / 96 / 2);
+  assert.equal(half.paperHeight, 4800 / 96 / 2);
+  const big = printParams({ layout: 'single', scale: 150 }, { width: 960, height: 96 * 1000 - 2 });
+  assert.ok(Math.abs(big.scale - 0.2) < 1e-9);
+});
+
+test("slide and window presets give their aspect ratio and override the site's @page", () => {
+  const slide = printParams({ paper: 'slide169' }, VIEW);
+  assert.deepEqual([slide.paperWidth, slide.paperHeight, slide.preferCSSPageSize], [13.333, 7.5, false]);
+  assert.deepEqual(paperSize({ paper: 'slide43' }, VIEW), [10, 7.5]);
+  // One screen per page: a presentation's 100vh sections land one per page.
+  assert.deepEqual(paperSize({ paper: 'window' }, VIEW), [15, 8.4375]);
+  // Already landscape: the checkbox can't flip it to portrait.
+  assert.deepEqual(paperSize({ paper: 'slide169', landscape: true }, VIEW), [13.333, 7.5]);
+});
+
+test('custom size is clamped to 1–200in and landscape puts the long side across', () => {
+  assert.deepEqual(paperSize({ paper: 'custom', customWidth: 6, customHeight: 9 }, VIEW), [6, 9]);
+  assert.deepEqual(paperSize({ paper: 'custom', customWidth: 6, customHeight: 9, landscape: true }, VIEW), [9, 6]);
+  assert.deepEqual(paperSize({ paper: 'custom', customWidth: 0, customHeight: 900 }, VIEW), [1, 200]);
+  assert.deepEqual(paperSize({ paper: 'custom', customWidth: '', customHeight: null }, VIEW), [8.5, 11]);
+});
+
+test('wait is seconds, clamped to 0–30', () => {
+  assert.equal(waitMs({ delay: 1.5 }), 1500);
+  assert.equal(waitMs({ delay: -2 }), 0);
+  assert.equal(waitMs({ delay: 99 }), 30000);
+  assert.equal(waitMs({}), 0);
+});
+
+test('the wait runs after scrolling and before measuring, so revealed content is measured fully grown', async () => {
+  const { send, calls } = fakeSend();
+  await capturePdf(send, { layout: 'single', delay: 2 });
+  const order = calls.map((c) => {
+    const x = c.params?.expression;
+    return x === MEASURE ? 'measure' : x === LOAD_LAZY ? 'lazy' : x?.includes('setTimeout(r, 2000)') ? 'wait' : c.method;
+  });
+  assert.deepEqual(order.slice(0, 4), ['Emulation.setEmulatedMedia', 'lazy', 'wait', 'measure']);
+});
+
+test('no wait call at all when the wait is 0', async () => {
+  const { send, calls } = fakeSend();
+  await capturePdf(send, { loadLazy: false });
+  assert.ok(!calls.some((c) => c.params?.expression?.includes('setTimeout(r,')));
 });
